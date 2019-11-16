@@ -2,10 +2,12 @@ package multipass
 
 import (
 	"fmt"
+	uuid "github.com/nu7hatch/gouuid"
+	"log"
 	"regexp"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-multipass/api/client"
+	cli "github.com/terraform-providers/terraform-provider-multipass/api/client"
 )
 
 func resourceItem() *schema.Resource {
@@ -57,40 +59,32 @@ func validateName(v interface{}, k string) (ws []string, es []error) {
 
 func create(d *schema.ResourceData, meta interface{}) error {
 
-	cli := getClient(d)
+	vms := meta.(*cli.VMClient).NewClient(d)
 
-	if err := cli.Exists(); err == nil {
-		cli.Delete()
-	}
-
-	d.SetId(d.Get("name").(string))
-	if err := cli.AddVm(); err != nil {
+	if err:=vms.AddVm();err!=nil{
 		return err
 	}
-	return nil
 
+	id,err:=uuid.NewV4()
+	if err!=nil{
+		log.Fatalf("uuid.NewV4() failed with %s\n", err)
+	}
+
+	d.SetId(id.String())
+
+	return nil
 }
 
-func delete(d *schema.ResourceData, m interface{}) error {
-	cli := getClient(d)
+func delete(d *schema.ResourceData, meta interface{}) error {
+	vms := meta.(*cli.VMClient).NewClient(d)
 
-	if err := cli.Exists(); err == nil {
-		cli.Delete()
+	if err:=vms.Delete();err!=nil{
+		return err
 	}
+
 	return nil
 }
 
 func read(d *schema.ResourceData, m interface{}) error {
-	fmt.Println("READ")
-
 	return nil
-}
-
-func getClient(d *schema.ResourceData) *client.Client {
-	name := d.Get("name").(string)
-	cpu := d.Get("cpu").(int)
-	memory := d.Get("memory").(int)
-	disk := d.Get("disk").(string)
-
-	return client.NewClient(name, cpu, memory, disk)
 }

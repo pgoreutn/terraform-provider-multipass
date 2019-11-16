@@ -21,7 +21,7 @@ func TestExists(t *testing.T) {
 }
 
 func TestAddVm(t *testing.T) {
-	err := client.AddVm()
+	err := client.AddVm(nil)
 	assert.Error(t, err, nil)
 	fmt.Println(err)
 }

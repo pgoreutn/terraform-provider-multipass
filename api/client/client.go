@@ -3,6 +3,7 @@ package client
 import (
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform/helper/schema"
 	"log"
 	"os/exec"
 	"runtime"
@@ -11,44 +12,31 @@ import (
 var multipass, multipassError = getBinary()
 
 // Client holds all of the information required to connect to multipass vm
-type Client struct {
+type VMClient struct {
 	name   string
 	cpu    int
 	memory int
 	disk   string
 }
 
-type Operations interface {
-	Create() error
-
-	Exists() error
-
-	AddVm() error
-
-	Delete() error
-}
-
-func NewClient(name string, cpu int, memory int, disk string) *Client {
-
-	return &Client{
-		name:   name,
-		cpu:    cpu,
-		memory: memory,
-		disk:   disk,
+func (*VMClient)NewClient(d *schema.ResourceData) *VMClient {
+	return &VMClient{
+		name:   d.Get("name").(string),
+		cpu:    d.Get("cpu").(int),
+		memory: d.Get("memory").(int),
+		disk:   d.Get("disk").(string),
 	}
 }
 
-func (*Client) Create() error {
-
+func (*VMClient) Create() error {
 	return nil
 }
 
-func (cli *Client) Exists() error {
+func (cli *VMClient) Exists() error {
 	return cli.multipass_exists()
 }
 
-//multipass_exists verify if the multipass bin exist or not.
-func (cli *Client) multipass_exists() error {
+func (cli *VMClient) multipass_exists() error {
 
 	if multipassError != nil {
 		if _, err := exec.LookPath(multipass); err != nil {
@@ -63,27 +51,16 @@ func (cli *Client) multipass_exists() error {
 	return nil
 }
 
-func (cli *Client) AddVm() error {
+func (cli *VMClient) AddVm() error {
 
-	// multipass launch ubuntu --name master --cpus 2 --mem 2G --disk 8G
-	switch os := runtime.GOOS; {
-	case os != "windows":
-
-		out, err := exec.Command("multipass", "launch", "ubuntu", "--name", cli.name, "--cpus", "2", "--mem", "2G", "--disk", "8G").Output()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("The date is %s\n", out)
-
-		return err
-	case os == "Windows":
-		fmt.Println("Windows")
+	_, err := exec.Command(multipass, "launch", "ubuntu", "--name", cli.name, "--cpus", "2", "--mem", "2G", "--disk", "8G").Output()
+	if err != nil {
+		log.Fatal(err)
 	}
-
 	return nil
 }
 
-func (cli *Client) Delete() error {
+func (cli *VMClient) Delete() error {
 	// multipass launch ubuntu --name master --cpus 2 --mem 2G --disk 8G
 	switch os := runtime.GOOS; {
 	case os != "windows":
